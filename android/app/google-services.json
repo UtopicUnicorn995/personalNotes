@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1058350876900",
+    "project_id": "personalnotes-f267f",
+    "storage_bucket": "personalnotes-f267f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1058350876900:android:30e9f605d5fa7f8c1544f1",
+        "android_client_info": {
+          "package_name": "com.personalNotes"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAYnd24N5jaW-XfMVn21l3xrqVxmac2l3M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
