@@ -16,9 +16,11 @@ import {
   onSnapshot,
   getFirestore,
   doc,
+  getDoc,
   addDoc,
   setDoc,
   deleteDoc,
+  serverTimestamp,
 } from '@react-native-firebase/firestore';
 import FAIcon from 'react-native-vector-icons/FontAwesome';
 import FAIcon5 from 'react-native-vector-icons/FontAwesome5';
@@ -46,70 +48,92 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  const sortedNotes = notes => {
+    return [...notes].sort((a, b) => {
+      const aTime = a.updatedAt?.toDate ? a.updatedAt.toDate().getTime() : 0;
+      const bTime = b.updatedAt?.toDate ? b.updatedAt.toDate().getTime() : 0;
+      return bTime - aTime;
+    });
+  };
+
   const addNewNote = async (newNoteTitle, newNoteContent) => {
-    const db = getFirestore();
-    const noteRef = collection(db, 'Notes');
+    try {
+      const db = getFirestore();
+      const noteRef = collection(db, 'Notes');
 
-    const data = {
-      title: newNoteTitle,
-      content: newNoteContent,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+      const data = {
+        title: newNoteTitle,
+        content: newNoteContent,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
 
-    const docRef = await addDoc(noteRef, data);
+      const docRef = await addDoc(noteRef, data);
 
-    const newNote = {
-      title: newNoteTitle,
-      content: newNoteContent,
-      id: docRef.id,
-    };
+      const newNote = {
+        title: newNoteTitle,
+        content: newNoteContent,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        id: docRef.id,
+      };
 
-    setSelectedNote(newNote);
-    setIsNoteLoading(false);
+      setSelectedNote(newNote);
+    } catch (error) {
+      console.error('error creating note!', error);
+    } finally {
+      setIsNoteLoading(false);
+    }
   };
 
   const updateNote = async (updateNoteTitle, updateNoteContent) => {
-    const db = getFirestore();
-    const noteRef = doc(db, 'Notes', selectedNote.id);
+    try {
+      const db = getFirestore();
+      const noteRef = doc(db, 'Notes', selectedNote.id);
 
-    await setDoc(noteRef, {
-      title: updateNoteTitle,
-      content: updateNoteContent,
-      updatedAt: new Date(),
-    });
+      console.log('started updating');
+      await setDoc(noteRef, {
+        title: updateNoteTitle,
+        content: updateNoteContent,
+        updatedAt: serverTimestamp(),
+      });
 
-    const updatedNote = {
-      title: updateNoteTitle,
-      content: updateNoteContent,
-      id: selectedNote.id,
-    };
+      const updatedSnap = await getDoc(noteRef);
+      const updatedNote = {id: noteRef.id, ...updatedSnap.data()};
 
-    setNotes(prev =>
-      prev.map(note => (note.id === selectedNote.id ? updatedNote : note)),
-    );
-    setSelectedNote(updatedNote);
-    setIsNoteLoading(false);
+      setNotes(prev =>
+        prev.map(note => (note.id === selectedNote.id ? updatedNote : note)),
+      );
+      setSelectedNote(updatedNote);
+    } catch (error) {
+      console.error('There is an issue upon updating notes', error);
+    } finally {
+      setIsNoteLoading(false);
+    }
   };
 
   const deleteNote = async () => {
-    const db = getFirestore();
-    const noteRef = doc(db, 'Notes', selectedNote.id);
+    try {
+      const db = getFirestore();
+      const noteRef = doc(db, 'Notes', selectedNote.id);
 
-    Alert.alert('Confirm', 'Are you sure to delete note?', [
-      {
-        text: 'OK',
-        onPress: async () => {
-          await deleteDoc(noteRef);
-          setSelectedNote(null);
+      Alert.alert('Confirm', 'Are you sure to delete note?', [
+        {
+          text: 'OK',
+          onPress: async () => {
+            await deleteDoc(noteRef);
+            setSelectedNote(null);
+          },
         },
-      },
-      {
-        text: 'Cancel',
-        onPress: () => console.log('Cancel Pressed'),
-        style: 'cancel',
-      },
-    ]);
+        {
+          text: 'Cancel',
+          onPress: () => console.log('Cancel Pressed'),
+          style: 'cancel',
+        },
+      ]);
+    } catch (error) {
+      console.error('error deleting notes', error);
+    }
   };
 
   const Card = ({title, content, id}) => (
@@ -246,7 +270,7 @@ export default function App() {
         </View>
         <MasonryList
           refreshControl={false}
-          data={notes}
+          data={sortedNotes(notes)}
           style={{gap: hp('2%')}}
           keyExtractor={(item, index) => item.id || index.toString()}
           numColumns={2}
